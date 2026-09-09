@@ -2,871 +2,301 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>CS:GO 3D FPS Game - Expanded Map & Fixed Engine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D FPS WebGame - Fixed Enemy Visibility</title>
     <style>
-        * {
-            box-sizing: border-box;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-
-        body, html {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            width: 100%;
-            height: 100%;
-            background-color: #000000;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        #canvas-container {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
-
-        /* Vùng nhận cảm ứng xoay góc nhìn trên điện thoại */
-        #touch-look-zone {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 2;
-            touch-action: none;
-        }
-
-        /* Tâm ngắm Crosshair */
-        #crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 16px;
-            height: 16px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        #crosshair::before, #crosshair::after {
-            content: '';
-            position: absolute;
-            background: rgba(0, 255, 68, 0.95);
-            box-shadow: 0 0 4px rgba(0,0,0,0.8);
-        }
-
-        #crosshair::before {
-            top: 7px;
-            left: -6px;
-            width: 28px;
-            height: 2px;
-        }
-
-        #crosshair::after {
-            top: -6px;
-            left: 7px;
-            width: 2px;
-            height: 28px;
-        }
-
-        /* Bảng điểm Scoreboard */
-        #score-board {
-            position: absolute;
-            top: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #ffffff;
-            font-size: 18px;
-            font-weight: 800;
-            background: rgba(15, 15, 20, 0.8);
-            padding: 10px 24px;
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(6px);
-            z-index: 10;
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            pointer-events: none;
-        }
-
-        /* HUD Giao diện chỉ số */
-        #hud {
-            position: absolute;
-            bottom: 25px;
-            left: 25px;
-            color: #ffffff;
-            font-size: 16px;
-            font-weight: 700;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
-            pointer-events: none;
-            background: rgba(10, 10, 15, 0.8);
-            padding: 16px 22px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(6px);
-            z-index: 10;
-            min-width: 210px;
-        }
-
-        .hud-row {
-            margin-bottom: 6px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .hud-row:last-child {
-            margin-bottom: 0;
-        }
-
-        /* Joystick ảo di chuyển */
-        #joystick-zone {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            width: 140px;
-            height: 140px;
-            background: rgba(255, 255, 255, 0.12);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            z-index: 15;
-            touch-action: none;
-        }
-
-        #joystick-knob {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 102, 0, 0.9);
-            border: 2px solid #ffffff;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px rgba(0,0,0,0.6);
-            pointer-events: none;
-        }
-
-        /* Màn hình Kết thúc Game */
-        #game-over {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(5, 5, 8, 0.92);
-            color: #ffffff;
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            backdrop-filter: blur(8px);
-        }
-
-        #game-over h1 {
-            font-size: 42px;
-            margin-bottom: 10px;
-            letter-spacing: 2px;
-        }
-
-        #game-over p {
-            font-size: 20px;
-            color: #cccccc;
-            margin-bottom: 30px;
-        }
-
-        button.btn-restart {
-            padding: 14px 40px;
-            font-size: 18px;
-            font-weight: 700;
-            background: #ff6600;
-            color: #ffffff;
-            border: none;
-            border-radius: 30px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 102, 0, 0.4);
-            transition: all 0.2s ease;
-        }
-
-        button.btn-restart:hover {
-            background: #ff8533;
-            transform: scale(1.05);
-        }
-
-        /* Hiệu ứng báo sát thương */
-        #damage-flash {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 0, 0, 0.35);
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.15s ease-out;
-            z-index: 5;
-        }
+        * { box-sizing: border-box; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 12px; height: 12px; border: 2px solid rgba(0, 255, 255, 0.9); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; }
+        #crosshair::before { content: ''; position: absolute; top: 3px; left: 3px; width: 2px; height: 2px; background: red; border-radius: 50%; }
+        #hud { position: absolute; bottom: 20px; left: 20px; color: #fff; font-size: 20px; font-weight: bold; text-shadow: 2px 2px 4px #000; z-index: 10; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 8px; border: 1px solid #444; }
+        #minimap { position: absolute; top: 20px; right: 20px; width: 140px; height: 140px; border: 2px solid #00ffff; border-radius: 50%; background: rgba(0,0,0,0.6); z-index: 10; }
+        #instructions { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; text-align: center; background: rgba(10,10,15,0.9); padding: 40px; border-radius: 12px; border: 1px solid #00ffff; cursor: pointer; z-index: 20; box-shadow: 0 0 20px rgba(0,255,255,0.3); }
+        #instructions h2 { margin-top: 0; color: #00ffff; letter-spacing: 2px; }
     </style>
-
-    <!-- Thư viện Three.js và GLTFLoader -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 <body>
-
-    <div id="canvas-container"></div>
-    <div id="touch-look-zone"></div>
     <div id="crosshair"></div>
-    <div id="damage-flash"></div>
-
-    <!-- Joystick ảo -->
-    <div id="joystick-zone">
-        <div id="joystick-knob"></div>
-    </div>
-
-    <!-- Bảng điểm -->
-    <div id="score-board">
-        <div>MẠNG THUA: <span id="player-deaths" style="color: #ff4444;">0</span> / 6</div>
-        <div>|</div>
-        <div>ĐỊCH CHẾT: <span id="enemy-deaths" style="color: #00ff00;">0</span> / 6</div>
-    </div>
-
-    <!-- HUD -->
-    <div id="hud">
-        <div class="hud-row">
-            <span>MÁU:</span>
-            <span id="health-val" style="color: #00ff00;">100 HP</span>
-        </div>
-        <div class="hud-row">
-            <span>SÚNG:</span>
-            <span id="gun-name" style="color: #ff9900;">Đang khởi tạo...</span>
-        </div>
-        <div class="hud-row">
-            <span>SÁT THƯƠNG:</span>
-            <span id="gun-damage">0</span>
-        </div>
-    </div>
-
-    <!-- Game Over -->
-    <div id="game-over">
-        <h1 id="game-over-title">KẾT QUẢ GAME</h1>
-        <p id="game-over-desc">Mô tả kết quả</p>
-        <button class="btn-restart" onclick="location.reload()">CHƠI LẠI NGAY</button>
+    <div id="hud">HP: <span id="hp" style="color: #00ff00;">100</span> | Mạng hạ: <span id="kills" style="color: #ffff00;">0</span></div>
+    <canvas id="minimap" width="140" height="140"></canvas>
+    
+    <div id="instructions">
+        <h2>NHẤP ĐỂ BẮT ĐẦU CHƠI</h2>
+        <p>Di chuyển: <b>WASD</b></p>
+        <p>Bắn: <b>Chuột trái</b> | Nhắm xoay: <b>Chuột</b></p>
     </div>
 
     <script>
-        /**
-         * CS:GO 3D FPS Game Engine - Fixed & Expanded Map
-         */
+        let scene, camera, renderer, clock;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let velocity = new THREE.Vector3();
+        let direction = new THREE.Vector3();
+        let enemies = [];
+        let playerHP = 100, kills = 0;
+        let isLocked = false;
 
-        const GAME_CONFIG = {
-            MAX_DEATHS: 6,
-            PLAYER_HEIGHT: 1.7,
-            PLAYER_SPEED: 0.18,
-            JOYSTICK_SENSITIVITY: 0.08,
-            MOUSE_SENSITIVITY: 0.0025,
-            TOUCH_LOOK_SENSITIVITY: 0.004,
-            MAP_SIZE: 160
-        };
+        const minimapCanvas = document.getElementById('minimap');
+        const minimapCtx = minimapCanvas.getContext('2d');
 
-        const WEAPONS_DATABASE = [
-            {
-                id: 'ak47',
-                name: 'AK47 Wild Lotus',
-                modelFile: 'csgo_ak47_wild_lotus.glb',
-                damage: 5,
-                fireRate: 300,
-                color: 0xff6600
-            },
-            {
-                id: 'm4a4',
-                name: 'M4A4 Cyber Security',
-                modelFile: 'csgo_m4a4_cyper_security.glb',
-                damage: 10,
-                fireRate: 2000,
-                color: 0xff0000
-            }
-        ];
-
-        // Vị trí Spawn rộng khắp Map lớn
-        const SPAWN_LOCATIONS = [
-            new THREE.Vector3(-60, GAME_CONFIG.PLAYER_HEIGHT, -60),
-            new THREE.Vector3(60, GAME_CONFIG.PLAYER_HEIGHT, -60),
-            new THREE.Vector3(-60, GAME_CONFIG.PLAYER_HEIGHT, 60),
-            new THREE.Vector3(60, GAME_CONFIG.PLAYER_HEIGHT, 60),
-            new THREE.Vector3(0, GAME_CONFIG.PLAYER_HEIGHT, -65),
-            new THREE.Vector3(0, GAME_CONFIG.PLAYER_HEIGHT, 65)
-        ];
-
-        let scene, camera, renderer, gltfLoader;
-        let isGameActive = true;
-        let playerDeathsCount = 0;
-        let enemyDeathsCount = 0;
-        let playerCurrentHealth = 100;
-        let enemyCurrentHealth = 100;
-
-        // Góc nhìn & FPS Rig
-        let cameraYaw = 0;
-        let cameraPitch = 0;
-        let fpsArmRigGroup = new THREE.Group();
-        let activeWeaponMesh = null;
-        let activeWeaponData = null;
-        let lastPlayerShootTimestamp = 0;
-
-        // Điều khiển phím
-        const keyState = { forward: false, backward: false, left: false, right: false };
-
-        // Joystick
-        const joystickState = { active: false, touchId: null, startX: 0, startY: 0, moveX: 0, moveY: 0, maxRadius: 50 };
-
-        // Cảm ứng xoay màn hình (Touch Look)
-        const touchLookState = { active: false, touchId: null, lastX: 0, lastY: 0 };
-
-        // Kẻ địch AI
-        let enemyCharacterGroup = new THREE.Group();
-        let enemyHeadMesh = null;
-        let enemyWeaponData = null;
-        let enemyCoverPosition = new THREE.Vector3(0, 0, -5);
-        let isEnemyHiding = true;
-        let enemyAiTimer = 0;
-        let lastEnemyShootTimestamp = 0;
-
-        // Bắn súng
-        const raycasterEngine = new THREE.Raycaster();
-        const screenCenterPoint = new THREE.Vector2(0, 0);
-
-        function initEngine() {
-            const container = document.getElementById('canvas-container');
-
+        function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87ceeb);
-            scene.fog = new THREE.FogExp2(0x87ceeb, 0.008);
+            scene.background = new THREE.Color(0x0e141d);
+            scene.fog = new THREE.FogExp2(0x0e141d, 0.012);
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.rotation.order = 'YXZ';
 
-            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.shadowMap.enabled = true;
-            container.appendChild(renderer.domElement);
-
-            setupEnvironmentLighting();
-            gltfLoader = new THREE.GLTFLoader();
-
-            buildLargeMap();
-            constructFPSRig();
-            setupJoystickEvents();
-            setupTouchLookEvents();
-            bindKeyboardAndMouseEvents();
-
-            respawnPlayerCharacter();
-            spawnEnemyBot();
-
-            renderer.domElement.addEventListener('click', () => {
-                if (isGameActive && document.pointerLockElement !== document.body) {
-                    document.body.requestPointerLock();
-                }
-            });
-
-            requestAnimationFrame(gameMainLoop);
-        }
-
-        function setupEnvironmentLighting() {
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            // 1. Ánh sáng đầy đủ (Đảm bảo Kẻ địch luôn nhìn thấy rõ)
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
             scene.add(ambientLight);
 
-            const sunLight = new THREE.DirectionalLight(0xffffff, 0.9);
-            sunLight.position.set(50, 80, 40);
-            sunLight.castShadow = true;
-            sunLight.shadow.mapSize.width = 2048;
-            sunLight.shadow.mapSize.height = 2048;
-            scene.add(sunLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+            dirLight.position.set(30, 50, 20);
+            scene.add(dirLight);
+
+            // 2. Sàn đấu 3D
+            const floorGeo = new THREE.PlaneGeometry(300, 300);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x1a2536, roughness: 0.8 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            scene.add(floor);
+
+            const grid = new THREE.GridHelper(300, 60, 0x00ffff, 0x223344);
+            grid.position.y = 0.01;
+            scene.add(grid);
+
+            // 3. Mô hình tay & súng First-Person
+            createWeapon();
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            clock = new THREE.Clock();
+
+            setupControls();
+
+            // Sinh 8 kẻ địch ban đầu
+            for(let i = 0; i < 8; i++) {
+                spawnEnemy();
+            }
+
+            window.addEventListener('resize', onWindowResize);
+            animate();
         }
 
-        // DỰNG BẢN ĐỒ RỘNG LỚN (MAP TO)
-        function buildLargeMap() {
-            const mapGroup = new THREE.Group();
+        function createWeapon() {
+            const weaponGroup = new THREE.Group();
+            
+            // Thân súng
+            const gunGeo = new THREE.BoxGeometry(0.12, 0.16, 0.6);
+            const gunMat = new THREE.MeshStandardMaterial({ color: 0x111111, metallic: 0.8, roughness: 0.2 });
+            const gun = new THREE.Mesh(gunGeo, gunMat);
+            gun.position.set(0.22, -0.22, -0.45);
+            weaponGroup.add(gun);
 
-            // Sàn nhà kích thước lớn 160x160
-            const floorGeo = new THREE.BoxGeometry(GAME_CONFIG.MAP_SIZE, 1, GAME_CONFIG.MAP_SIZE);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x3d3d3d, roughness: 0.8 });
-            const floorMesh = new THREE.Mesh(floorGeo, floorMat);
-            floorMesh.position.y = -0.5;
-            floorMesh.receiveShadow = true;
-            mapGroup.add(floorMesh);
+            // Nòng súng
+            const barrelGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.3);
+            const barrelMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+            const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+            barrel.rotation.x = Math.PI / 2;
+            barrel.position.set(0.22, -0.18, -0.7);
+            weaponGroup.add(barrel);
 
-            // Bức tường bao quanh
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
-            const wallH = 14;
-            const halfSize = GAME_CONFIG.MAP_SIZE / 2;
-
-            const w1 = new THREE.Mesh(new THREE.BoxGeometry(GAME_CONFIG.MAP_SIZE, wallH, 2), wallMat);
-            w1.position.set(0, wallH / 2, -halfSize);
-            const w2 = new THREE.Mesh(new THREE.BoxGeometry(GAME_CONFIG.MAP_SIZE, wallH, 2), wallMat);
-            w2.position.set(0, wallH / 2, halfSize);
-            const w3 = new THREE.Mesh(new THREE.BoxGeometry(2, wallH, GAME_CONFIG.MAP_SIZE), wallMat);
-            w3.position.set(-halfSize, wallH / 2, 0);
-            const w4 = new THREE.Mesh(new THREE.BoxGeometry(2, wallH, GAME_CONFIG.MAP_SIZE), wallMat);
-            w4.position.set(halfSize, wallH / 2, 0);
-
-            mapGroup.add(w1, w2, w3, w4);
-
-            // Tạo danh sách nhiều tướng/chướng ngại vật rải rác trên bản đồ
-            const boxGeo = new THREE.BoxGeometry(8, 4, 3);
-            const boxMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b });
-
-            const boxPositions = [
-                [0, 2, 0], [-20, 2, -20], [20, 2, 20], [-20, 2, 20], [20, 2, -20],
-                [-40, 2, -40], [40, 2, 40], [-40, 2, 40], [40, 2, -40], [0, 2, 30], [0, 2, -30]
-            ];
-
-            boxPositions.forEach(pos => {
-                const box = new THREE.Mesh(boxGeo, boxMat);
-                box.position.set(pos[0], pos[1], pos[2]);
-                box.castShadow = true;
-                box.receiveShadow = true;
-                mapGroup.add(box);
-            });
-
-            scene.add(mapGroup);
-
-            // Tải file GLB nếu có
-            gltfLoader.load('maps.glb', (gltf) => {
-                scene.add(gltf.scene);
-            }, undefined, () => {});
-        }
-
-        function constructFPSRig() {
+            camera.add(weaponGroup);
             scene.add(camera);
-            camera.add(fpsArmRigGroup);
-            fpsArmRigGroup.position.set(0, -0.28, -0.45);
+        }
 
-            gltfLoader.load('first_person_arms.glb', (gltf) => {
-                const arms = gltf.scene;
-                arms.scale.set(0.4, 0.4, 0.4);
-                fpsArmRigGroup.add(arms);
-            }, undefined, () => {
-                // Tay mặc định
-                const armGeo = new THREE.BoxGeometry(0.12, 0.12, 0.45);
-                const armMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c });
-                const leftArm = new THREE.Mesh(armGeo, armMat);
-                leftArm.position.set(-0.28, -0.12, 0.1);
-                const rightArm = new THREE.Mesh(armGeo, armMat);
-                rightArm.position.set(0.28, -0.12, 0.1);
-                fpsArmRigGroup.add(leftArm, rightArm);
+        function spawnEnemy() {
+            const enemyGroup = new THREE.Group();
+
+            // Thân kẻ địch (Màu đỏ rực rỡ + hiệu ứng phát sáng nhẹ để không bao giờ bị biến mất)
+            const bodyGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.8, 16);
+            const bodyMat = new THREE.MeshStandardMaterial({ 
+                color: 0xff0033, 
+                emissive: 0x550011, 
+                roughness: 0.3 
             });
-        }
-
-        function respawnPlayerCharacter() {
-            const randPos = SPAWN_LOCATIONS[Math.floor(Math.random() * SPAWN_LOCATIONS.length)];
-            camera.position.copy(randPos);
-
-            playerCurrentHealth = 100;
-            updateHudDisplay();
-
-            activeWeaponData = WEAPONS_DATABASE[Math.floor(Math.random() * WEAPONS_DATABASE.length)];
-            document.getElementById('gun-name').innerText = activeWeaponData.name;
-            document.getElementById('gun-damage').innerText = activeWeaponData.damage;
-
-            if (activeWeaponMesh) fpsArmRigGroup.remove(activeWeaponMesh);
-
-            // Khối súng hiển thị tức thì
-            const gunGeo = new THREE.BoxGeometry(0.1, 0.1, 0.5);
-            const gunMat = new THREE.MeshStandardMaterial({ color: activeWeaponData.color });
-            activeWeaponMesh = new THREE.Mesh(gunGeo, gunMat);
-            activeWeaponMesh.position.set(0.18, -0.12, -0.32);
-            fpsArmRigGroup.add(activeWeaponMesh);
-
-            gltfLoader.load(activeWeaponData.modelFile, (gltf) => {
-                fpsArmRigGroup.remove(activeWeaponMesh);
-                activeWeaponMesh = gltf.scene;
-                activeWeaponMesh.position.set(0.18, -0.15, -0.32);
-                activeWeaponMesh.scale.set(0.45, 0.45, 0.45);
-                fpsArmRigGroup.add(activeWeaponMesh);
-            }, undefined, () => {});
-        }
-
-        // TẠO KẺ ĐỊCH (ĐẢM BẢO LUÔN HIỂN THỊ RÕ RÀNG)
-        function spawnEnemyBot() {
-            if (enemyCharacterGroup) scene.remove(enemyCharacterGroup);
-
-            enemyCharacterGroup = new THREE.Group();
-            enemyCurrentHealth = 100;
-            enemyWeaponData = WEAPONS_DATABASE[Math.floor(Math.random() * WEAPONS_DATABASE.length)];
-
-            enemyCoverPosition.set(0, 0, -5);
-            enemyCharacterGroup.position.copy(enemyCoverPosition);
-
-            // Dựng mô hình Địch chắc chắn hiển thị ngay lập tức
-            const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.4, 16);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xcc0000 });
-            const enemyBody = new THREE.Mesh(bodyGeo, bodyMat);
-            enemyBody.position.y = 0.7;
-            enemyBody.name = "enemy_body";
-            enemyCharacterGroup.add(enemyBody);
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.9;
+            enemyGroup.add(body);
 
             // Đầu kẻ địch
             const headGeo = new THREE.SphereGeometry(0.35, 16, 16);
-            const headMat = new THREE.MeshStandardMaterial({ color: 0xffaaaa });
-            enemyHeadMesh = new THREE.Mesh(headGeo, headMat);
-            enemyHeadMesh.position.y = 1.7;
-            enemyHeadMesh.name = "enemy_head";
-            enemyCharacterGroup.add(enemyHeadMesh);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 2.05;
+            enemyGroup.add(head);
 
-            // Súng địch
-            const eGunGeo = new THREE.BoxGeometry(0.1, 0.1, 0.5);
-            const eGunMat = new THREE.MeshStandardMaterial({ color: enemyWeaponData.color });
-            const eGun = new THREE.Mesh(eGunGeo, eGunMat);
-            eGun.position.set(0.4, 1.1, -0.3);
-            enemyCharacterGroup.add(eGun);
+            // Mắt phát sáng chỉ hướng nhìn của địch
+            const eyeGeo = new THREE.BoxGeometry(0.4, 0.1, 0.2);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+            const eye = new THREE.Mesh(eyeGeo, eyeMat);
+            eye.position.set(0, 2.1, -0.3);
+            enemyGroup.add(eye);
 
-            scene.add(enemyCharacterGroup);
+            // Vị trí xuất hiện ngẫu nhiên cách người chơi 25-60 đơn vị
+            const radius = 25 + Math.random() * 35;
+            const angle = Math.random() * Math.PI * 2;
+            enemyGroup.position.set(
+                camera.position.x + Math.cos(angle) * radius, 
+                0, 
+                camera.position.z + Math.sin(angle) * radius
+            );
 
-            // Thử tải GLB ghi đè lên nếu tệp hợp lệ
-            gltfLoader.load('ctm_st6_variantd_-_csgo_character.glb', (gltf) => {
-                scene.remove(enemyCharacterGroup);
-                enemyCharacterGroup = new THREE.Group();
-                enemyCharacterGroup.position.copy(enemyCoverPosition);
-
-                const model = gltf.scene;
-                model.traverse((child) => {
-                    if (child.isMesh) child.name = "enemy_body";
-                });
-                enemyCharacterGroup.add(model);
-
-                // Gắn thêm Hitbox Đầu
-                enemyHeadMesh = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.35, 8, 8),
-                    new THREE.MeshBasicMaterial({ visible: false })
-                );
-                enemyHeadMesh.position.y = 1.7;
-                enemyHeadMesh.name = "enemy_head";
-                enemyCharacterGroup.add(enemyHeadMesh);
-
-                scene.add(enemyCharacterGroup);
-            }, undefined, () => {});
+            enemyGroup.userData = { hp: 100, speed: 4 + Math.random() * 2 };
+            scene.add(enemyGroup);
+            enemies.push(enemyGroup);
         }
 
-        // THIẾT LẬP JOYSTICK DI CHUYỂN
-        function setupJoystickEvents() {
-            const joystickZone = document.getElementById('joystick-zone');
-            const joystickKnob = document.getElementById('joystick-knob');
-
-            joystickZone.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const touch = e.changedTouches[0];
-                joystickState.active = true;
-                joystickState.touchId = touch.identifier;
-
-                const rect = joystickZone.getBoundingClientRect();
-                joystickState.startX = rect.left + rect.width / 2;
-                joystickState.startY = rect.top + rect.height / 2;
-                updateJoystick(touch.clientX, touch.clientY);
-            }, { passive: false });
-
-            window.addEventListener('touchmove', (e) => {
-                if (!joystickState.active) return;
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    if (e.changedTouches[i].identifier === joystickState.touchId) {
-                        updateJoystick(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
-                        break;
-                    }
-                }
-            }, { passive: false });
-
-            const resetJoystick = (e) => {
-                if (!joystickState.active) return;
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    if (e.changedTouches[i].identifier === joystickState.touchId) {
-                        joystickState.active = false;
-                        joystickState.touchId = null;
-                        joystickState.moveX = 0;
-                        joystickState.moveY = 0;
-                        joystickKnob.style.transform = `translate(-50%, -50%)`;
-                        break;
-                    }
-                }
-            };
-
-            window.addEventListener('touchend', resetJoystick);
-            window.addEventListener('touchcancel', resetJoystick);
-
-            function updateJoystick(clientX, clientY) {
-                let dx = clientX - joystickState.startX;
-                let dy = clientY - joystickState.startY;
-                const dist = Math.hypot(dx, dy);
-
-                if (dist > joystickState.maxRadius) {
-                    const angle = Math.atan2(dy, dx);
-                    dx = Math.cos(angle) * joystickState.maxRadius;
-                    dy = Math.sin(angle) * joystickState.maxRadius;
-                }
-
-                joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-                joystickState.moveX = dx / joystickState.maxRadius;
-                joystickState.moveY = dy / joystickState.maxRadius;
-            }
-        }
-
-        // CẢM ỨNG XOAY MÀN HÌNH CHÔ ĐIỆN THOẠI (TOUCH LOOK)
-        function setupTouchLookEvents() {
-            const touchLookZone = document.getElementById('touch-look-zone');
-
-            touchLookZone.addEventListener('touchstart', (e) => {
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const touch = e.changedTouches[i];
-                    // Không trùng với ngón tay đang bấm Joystick
-                    if (touch.identifier !== joystickState.touchId && !touchLookState.active) {
-                        touchLookState.active = true;
-                        touchLookState.touchId = touch.identifier;
-                        touchLookState.lastX = touch.clientX;
-                        touchLookState.lastY = touch.clientY;
-                        break;
-                    }
-                }
+        function setupControls() {
+            const instructions = document.getElementById('instructions');
+            instructions.addEventListener('click', () => {
+                document.body.requestPointerLock();
             });
 
-            window.addEventListener('touchmove', (e) => {
-                if (!touchLookState.active) return;
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const touch = e.changedTouches[i];
-                    if (touch.identifier === touchLookState.touchId) {
-                        const dx = touch.clientX - touchLookState.lastX;
-                        const dy = touch.clientY - touchLookState.lastY;
-
-                        cameraYaw -= dx * GAME_CONFIG.TOUCH_LOOK_SENSITIVITY;
-                        cameraPitch -= dy * GAME_CONFIG.TOUCH_LOOK_SENSITIVITY;
-                        cameraPitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, cameraPitch));
-
-                        camera.rotation.order = "YXZ";
-                        camera.rotation.y = cameraYaw;
-                        camera.rotation.x = cameraPitch;
-
-                        touchLookState.lastX = touch.clientX;
-                        touchLookState.lastY = touch.clientY;
-                        break;
-                    }
-                }
+            document.addEventListener('pointerlockchange', () => {
+                isLocked = document.pointerLockElement === document.body;
+                instructions.style.display = isLocked ? 'none' : 'block';
             });
 
-            const stopTouchLook = (e) => {
-                if (!touchLookState.active) return;
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    if (e.changedTouches[i].identifier === touchLookState.touchId) {
-                        touchLookState.active = false;
-                        touchLookState.touchId = null;
-                        break;
-                    }
-                }
-            };
+            document.addEventListener('mousemove', (e) => {
+                if (!isLocked) return;
+                camera.rotation.y -= e.movementX * 0.0022;
+                camera.rotation.x -= e.movementY * 0.0022;
+                camera.rotation.x = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, camera.rotation.x));
+            });
 
-            window.addEventListener('touchend', stopTouchLook);
-            window.addEventListener('touchcancel', stopTouchLook);
-        }
-
-        function bindKeyboardAndMouseEvents() {
-            window.addEventListener('keydown', (e) => {
+            document.addEventListener('keydown', (e) => {
                 switch (e.code) {
-                    case 'KeyW': case 'ArrowUp': keyState.forward = true; break;
-                    case 'KeyS': case 'ArrowDown': keyState.backward = true; break;
-                    case 'KeyA': case 'ArrowLeft': keyState.left = true; break;
-                    case 'KeyD': case 'ArrowRight': keyState.right = true; break;
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyD': moveRight = true; break;
                 }
             });
 
-            window.addEventListener('keyup', (e) => {
+            document.addEventListener('keyup', (e) => {
                 switch (e.code) {
-                    case 'KeyW': case 'ArrowUp': keyState.forward = false; break;
-                    case 'KeyS': case 'ArrowDown': keyState.backward = false; break;
-                    case 'KeyA': case 'ArrowLeft': keyState.left = false; break;
-                    case 'KeyD': case 'ArrowRight': keyState.right = false; break;
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyD': moveRight = false; break;
                 }
             });
 
-            // Xoay chuột trên Máy tính
-            window.addEventListener('mousemove', (e) => {
-                if (document.pointerLockElement === document.body && isGameActive) {
-                    cameraYaw -= e.movementX * GAME_CONFIG.MOUSE_SENSITIVITY;
-                    cameraPitch -= e.movementY * GAME_CONFIG.MOUSE_SENSITIVITY;
-                    cameraPitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, cameraPitch));
-
-                    camera.rotation.order = "YXZ";
-                    camera.rotation.y = cameraYaw;
-                    camera.rotation.x = cameraPitch;
-                }
-            });
-
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
+            document.addEventListener('mousedown', (e) => {
+                if (isLocked && e.button === 0) shoot();
             });
         }
 
-        function processPlayerMovement() {
-            if (!isGameActive) return;
+        function shoot() {
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
-            const moveDir = new THREE.Vector3();
+            // Tạo hiệu ứng tia đạn bắn
+            const bulletGeo = new THREE.SphereGeometry(0.08, 8, 8);
+            const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            const bullet = new THREE.Mesh(bulletGeo, bulletMat);
+            bullet.position.copy(camera.position);
+            scene.add(bullet);
 
-            if (keyState.forward) moveDir.z -= 1;
-            if (keyState.backward) moveDir.z += 1;
-            if (keyState.left) moveDir.x -= 1;
-            if (keyState.right) moveDir.x += 1;
-
-            if (joystickState.active) {
-                moveDir.x += joystickState.moveX;
-                moveDir.z += joystickState.moveY;
-            }
-
-            if (moveDir.lengthSq() > 0) {
-                moveDir.normalize();
-                moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
-                camera.position.addScaledVector(moveDir, GAME_CONFIG.PLAYER_SPEED);
-            }
-
-            // Giới hạn trong phạm vi Map
-            const maxBound = (GAME_CONFIG.MAP_SIZE / 2) - 2;
-            camera.position.x = Math.max(-maxBound, Math.min(maxBound, camera.position.x));
-            camera.position.z = Math.max(-maxBound, Math.min(maxBound, camera.position.z));
-            camera.position.y = GAME_CONFIG.PLAYER_HEIGHT;
-        }
-
-        // TỰ ĐỘNG BẮN KHI TÂM CHĨA TRÚNG ĐỊCH
-        function processAutoShootingLogic() {
-            if (!isGameActive || !activeWeaponData) return;
-
-            const now = Date.now();
-            if (now - lastPlayerShootTimestamp < activeWeaponData.fireRate) return;
-
-            raycasterEngine.setFromCamera(screenCenterPoint, camera);
-            const intersects = raycasterEngine.intersectObjects(enemyCharacterGroup.children, true);
+            const intersects = raycaster.intersectObjects(enemies.map(e => e.children).flat());
 
             if (intersects.length > 0) {
-                const hitObj = intersects[0].object;
+                let hitMesh = intersects[0].object;
+                let enemyGroup = hitMesh.parent;
+                enemyGroup.userData.hp -= 35;
 
-                if (fpsArmRigGroup) fpsArmRigGroup.position.z = -0.38;
-                lastPlayerShootTimestamp = now;
+                // Đổi màu kẻ địch khi bị trúng đạn
+                hitMesh.material.color.setHex(0xffffff);
+                setTimeout(() => hitMesh.material.color.setHex(0xff0033), 120);
 
-                if (hitObj.name === "enemy_head") {
-                    applyDamageToEnemy(100); // Headshot
-                } else {
-                    applyDamageToEnemy(activeWeaponData.damage);
+                if (enemyGroup.userData.hp <= 0) {
+                    scene.remove(enemyGroup);
+                    enemies = enemies.filter(e => e !== enemyGroup);
+                    kills++;
+                    document.getElementById('kills').innerText = kills;
+                    spawnEnemy();
                 }
-            } else {
-                if (fpsArmRigGroup) fpsArmRigGroup.position.z = -0.45;
             }
+
+            setTimeout(() => scene.remove(bullet), 120);
         }
 
-        function processEnemyAiLogic() {
-            if (!isGameActive || !enemyCharacterGroup) return;
+        function updateMinimap() {
+            minimapCtx.clearRect(0, 0, 140, 140);
+            const center = 70;
+            const scale = 1.2;
 
-            const dist = enemyCharacterGroup.position.distanceTo(camera.position);
-            enemyAiTimer += 0.016;
+            // Người chơi
+            minimapCtx.fillStyle = '#00ffff';
+            minimapCtx.beginPath();
+            minimapCtx.arc(center, center, 4, 0, Math.PI * 2);
+            minimapCtx.fill();
 
-            if (dist < 35) {
-                if (enemyAiTimer > 2.0) {
-                    isEnemyHiding = !isEnemyHiding;
-                    enemyAiTimer = 0;
+            // Kẻ địch
+            minimapCtx.fillStyle = '#ff0033';
+            enemies.forEach(e => {
+                const dx = (e.position.x - camera.position.x) * scale;
+                const dz = (e.position.z - camera.position.z) * scale;
+                if (Math.hypot(dx, dz) < 65) {
+                    minimapCtx.beginPath();
+                    minimapCtx.arc(center + dx, center + dz, 3.5, 0, Math.PI * 2);
+                    minimapCtx.fill();
                 }
+            });
+        }
 
-                if (!isEnemyHiding) {
-                    enemyCharacterGroup.position.x = THREE.MathUtils.lerp(enemyCharacterGroup.position.x, 3.5, 0.05);
-                    enemyCharacterGroup.lookAt(camera.position.x, enemyCharacterGroup.position.y, camera.position.z);
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
 
-                    const now = Date.now();
-                    if (now - lastEnemyShootTimestamp > enemyWeaponData.fireRate) {
-                        applyDamageToPlayer(enemyWeaponData.damage);
-                        lastEnemyShootTimestamp = now;
+            if (isLocked) {
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * 120.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 120.0 * delta;
+
+                camera.translateX(-velocity.x * delta);
+                camera.translateZ(velocity.z * delta);
+                camera.position.y = 1.6; // Khóa độ cao góc nhìn FPS
+
+                // AI kẻ địch đuổi theo người chơi
+                enemies.forEach(enemy => {
+                    const dir = new THREE.Vector3().subVectors(camera.position, enemy.position);
+                    dir.y = 0;
+                    dir.normalize();
+                    enemy.position.addScaledVector(dir, enemy.userData.speed * delta);
+                    enemy.lookAt(camera.position.x, enemy.position.y, camera.position.z);
+
+                    // Xử lý mất máu khi kẻ địch chạm vào người
+                    if (enemy.position.distanceTo(camera.position) < 1.4) {
+                        playerHP = Math.max(0, playerHP - 0.3);
+                        document.getElementById('hp').innerText = Math.floor(playerHP);
                     }
-                } else {
-                    enemyCharacterGroup.position.x = THREE.MathUtils.lerp(enemyCharacterGroup.position.x, enemyCoverPosition.x, 0.05);
-                }
-            }
-        }
+                });
 
-        function applyDamageToEnemy(dmg) {
-            enemyCurrentHealth -= dmg;
-            if (enemyCurrentHealth <= 0) {
-                enemyDeathsCount++;
-                document.getElementById('enemy-deaths').innerText = enemyDeathsCount;
-
-                if (enemyDeathsCount >= GAME_CONFIG.MAX_DEATHS) {
-                    triggerGameOverScreen(true);
-                } else {
-                    spawnEnemyBot();
-                }
-            }
-        }
-
-        function applyDamageToPlayer(dmg) {
-            playerCurrentHealth -= dmg;
-            if (playerCurrentHealth < 0) playerCurrentHealth = 0;
-
-            const flash = document.getElementById('damage-flash');
-            flash.style.opacity = '1';
-            setTimeout(() => { flash.style.opacity = '0'; }, 100);
-
-            updateHudDisplay();
-
-            if (playerCurrentHealth <= 0) {
-                playerDeathsCount++;
-                document.getElementById('player-deaths').innerText = playerDeathsCount;
-
-                if (playerDeathsCount >= GAME_CONFIG.MAX_DEATHS) {
-                    triggerGameOverScreen(false);
-                } else {
-                    respawnPlayerCharacter();
-                }
-            }
-        }
-
-        function updateHudDisplay() {
-            document.getElementById('health-val').innerText = `${playerCurrentHealth} HP`;
-        }
-
-        function triggerGameOverScreen(hasWon) {
-            isGameActive = false;
-            if (document.pointerLockElement) document.exitPointerLock();
-
-            const gameOverPanel = document.getElementById('game-over');
-            const titleText = document.getElementById('game-over-title');
-            const descText = document.getElementById('game-over-desc');
-
-            gameOverPanel.style.display = 'flex';
-
-            if (hasWon) {
-                titleText.innerText = "BẠN ĐÃ CHIẾN THẮNG!";
-                titleText.style.color = "#00ff00";
-                descText.innerText = "Bạn đã hạ gục kẻ địch 6 lần thành công!";
-            } else {
-                titleText.innerText = "BẠN ĐÃ THẤT BẠI!";
-                titleText.style.color = "#ff3333";
-                descText.innerText = "Kẻ địch đã tiêu diệt bạn 6 lần. Hãy thử lại!";
-            }
-        }
-
-        function gameMainLoop() {
-            requestAnimationFrame(gameMainLoop);
-
-            if (isGameActive) {
-                processPlayerMovement();
-                processAutoShootingLogic();
-                processEnemyAiLogic();
+                updateMinimap();
             }
 
             renderer.render(scene, camera);
         }
 
-        window.addEventListener('DOMContentLoaded', initEngine);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        init();
     </script>
 </body>
 </html>
